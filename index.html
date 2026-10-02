@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gift Wishlist & Budget Organizer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-pink-50 to-rose-50 min-h-screen">
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <div class="flex items-center gap-3 mb-2">
+    <span class="text-3xl" aria-hidden="true">🎁</span>
+    <h1 class="text-3xl font-bold text-gray-800">Gift Wishlist & Budget Organizer</h1>
+  </div>
+  <p class="text-gray-500 mb-6 ml-12">受取人ごとにギフトアイデアを管理し、予算を追跡します</p>
+
+  <!-- 予算サマリ -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-2xl shadow p-4 text-center">
+      <div class="text-xs text-gray-400 mb-1">合計予算</div>
+      <div id="totalBudget" class="text-2xl font-bold text-gray-700">¥0</div>
+    </div>
+    <div class="bg-green-50 rounded-2xl shadow p-4 text-center">
+      <div class="text-xs text-gray-400 mb-1">購入済み</div>
+      <div id="purchasedAmount" class="text-2xl font-bold text-green-600">¥0</div>
+    </div>
+    <div class="bg-rose-50 rounded-2xl shadow p-4 text-center">
+      <div class="text-xs text-gray-400 mb-1">残り</div>
+      <div id="remainingAmount" class="text-2xl font-bold text-rose-500">¥0</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- 追加フォーム -->
+    <div class="bg-white rounded-2xl shadow p-6">
+      <h2 class="text-lg font-semibold text-gray-700 mb-4">ギフトを追加</h2>
+      <div class="space-y-3">
+        <div>
+          <label for="recipient" class="block text-sm font-medium text-gray-600 mb-1">受取人名 *</label>
+          <input id="recipient" type="text" placeholder="例: お母さん" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" aria-label="受取人名">
+        </div>
+        <div>
+          <label for="giftIdea" class="block text-sm font-medium text-gray-600 mb-1">ギフトアイデア *</label>
+          <input id="giftIdea" type="text" placeholder="例: ハンドクリームセット" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" aria-label="ギフトアイデア">
+        </div>
+        <div>
+          <label for="giftPrice" class="block text-sm font-medium text-gray-600 mb-1">予算金額（円）*</label>
+          <input id="giftPrice" type="number" placeholder="3000" min="0" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" aria-label="予算金額">
+        </div>
+        <div>
+          <label for="priority" class="block text-sm font-medium text-gray-600 mb-1">優先度</label>
+          <select id="priority" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" aria-label="優先度">
+            <option value="High">High（高）</option>
+            <option value="Medium" selected>Medium（中）</option>
+            <option value="Low">Low（低）</option>
+          </select>
+        </div>
+        <div>
+          <label for="giftNote" class="block text-sm font-medium text-gray-600 mb-1">メモ（任意）</label>
+          <input id="giftNote" type="text" placeholder="例: Amazonで購入予定" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" aria-label="メモ">
+        </div>
+        <button onclick="addGift()" class="w-full bg-rose-400 hover:bg-rose-500 text-white font-bold py-2 rounded-xl transition" aria-label="ギフト追加">追加する</button>
+      </div>
+
+      <div class="mt-4 pt-4 border-t">
+        <button onclick="clearAll()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm py-2 rounded-xl transition" aria-label="全データ削除">全データ削除</button>
+      </div>
+    </div>
+
+    <!-- リスト -->
+    <div class="lg:col-span-2">
+      <div class="flex gap-2 mb-3">
+        <button onclick="filterList('all')" id="filter-all" class="filter-btn active-filter px-4 py-1.5 rounded-full text-sm font-medium" aria-pressed="true">全て</button>
+        <button onclick="filterList('pending')" id="filter-pending" class="filter-btn inactive-filter px-4 py-1.5 rounded-full text-sm font-medium" aria-pressed="false">未購入</button>
+        <button onclick="filterList('purchased')" id="filter-purchased" class="filter-btn inactive-filter px-4 py-1.5 rounded-full text-sm font-medium" aria-pressed="false">購入済み</button>
+      </div>
+      <div id="giftList" class="space-y-6"></div>
+      <div id="emptyState" class="hidden bg-white rounded-2xl shadow p-12 text-center">
+        <div class="text-5xl mb-4" aria-hidden="true">🎁</div>
+        <p class="text-gray-400">ギフトを追加してください</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.active-filter { background: #FB7185; color: white; }
+.inactive-filter { background: white; color: #6B7280; border: 1px solid #E5E7EB; }
+.filter-btn { transition: all 0.2s; }
+</style>
+
+<script>
+const PRIORITY_COLOR = { High: 'bg-red-100 text-red-600', Medium: 'bg-yellow-100 text-yellow-600', Low: 'bg-gray-100 text-gray-500' };
+let gifts = [];
+try { gifts = JSON.parse(localStorage.getItem('gift_wishlist') || '[]'); } catch(e) { gifts = []; }
+let currentFilter = 'all';
+
+function save() { localStorage.setItem('gift_wishlist', JSON.stringify(gifts)); }
+
+function addGift() {
+  const recipient = document.getElementById('recipient').value.trim();
+  const idea = document.getElementById('giftIdea').value.trim();
+  const price = parseFloat(document.getElementById('giftPrice').value);
+  const priority = document.getElementById('priority').value;
+  const note = document.getElementById('giftNote').value.trim();
+  if (!recipient || !idea) { alert('受取人名とギフトアイデアは必須です'); return; }
+  if (isNaN(price) || price < 0) { alert('金額を正しく入力してください'); return; }
+  gifts.push({ id: Date.now(), recipient, idea, price, priority, note, purchased: false });
+  save();
+  document.getElementById('giftIdea').value = '';
+  document.getElementById('giftPrice').value = '';
+  document.getElementById('giftNote').value = '';
+  render();
+}
+
+function togglePurchased(id) {
+  const g = gifts.find(g => g.id === id);
+  if (g) { g.purchased = !g.purchased; save(); render(); }
+}
+
+function deleteGift(id) {
+  gifts = gifts.filter(g => g.id !== id);
+  save(); render();
+}
+
+function filterList(type) {
+  currentFilter = type;
+  ['all','pending','purchased'].forEach(t => {
+    const btn = document.getElementById('filter-' + t);
+    btn.className = 'filter-btn ' + (t === type ? 'active-filter' : 'inactive-filter') + ' px-4 py-1.5 rounded-full text-sm font-medium';
+    btn.setAttribute('aria-pressed', t === type ? 'true' : 'false');
+  });
+  render();
+}
+
+function clearAll() {
+  if (confirm('全データを削除しますか？')) { gifts = []; save(); render(); }
+}
+
+function render() {
+  // Filter
+  let filtered = gifts;
+  if (currentFilter === 'pending') filtered = gifts.filter(g => !g.purchased);
+  if (currentFilter === 'purchased') filtered = gifts.filter(g => g.purchased);
+
+  // Summary
+  const total = gifts.reduce((s,g) => s + g.price, 0);
+  const purchased = gifts.filter(g => g.purchased).reduce((s,g) => s + g.price, 0);
+  document.getElementById('totalBudget').textContent = '¥' + total.toLocaleString();
+  document.getElementById('purchasedAmount').textContent = '¥' + purchased.toLocaleString();
+  document.getElementById('remainingAmount').textContent = '¥' + (total - purchased).toLocaleString();
+
+  // Group by recipient
+  const groups = {};
+  for (const g of filtered) {
+    if (!groups[g.recipient]) groups[g.recipient] = [];
+    groups[g.recipient].push(g);
+  }
+
+  const list = document.getElementById('giftList');
+  const empty = document.getElementById('emptyState');
+  list.innerHTML = '';
+
+  if (Object.keys(groups).length === 0) {
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  for (const [recipient, items] of Object.entries(groups)) {
+    const groupTotal = items.reduce((s,g) => s + g.price, 0);
+    const groupPurchased = items.filter(g => g.purchased).reduce((s,g) => s + g.price, 0);
+
+    const section = document.createElement('div');
+    section.className = 'bg-white rounded-2xl shadow overflow-hidden';
+
+    const header = document.createElement('div');
+    header.className = 'flex items-center justify-between px-5 py-3 bg-rose-50 border-b';
+    const hTitle = document.createElement('h3');
+    hTitle.className = 'font-bold text-rose-700';
+    hTitle.textContent = recipient;
+    const hBudget = document.createElement('div');
+    hBudget.className = 'text-sm text-gray-500';
+    hBudget.textContent = '¥' + groupPurchased.toLocaleString() + ' / ¥' + groupTotal.toLocaleString();
+    header.appendChild(hTitle); header.appendChild(hBudget);
+
+    const ul = document.createElement('div');
+    ul.className = 'divide-y';
+
+    for (const g of items) {
+      const li = document.createElement('div');
+      li.className = 'flex items-start gap-3 px-5 py-3 ' + (g.purchased ? 'bg-gray-50 opacity-60' : '');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = g.purchased;
+      checkbox.className = 'mt-1 w-4 h-4 accent-rose-400 cursor-pointer';
+      checkbox.setAttribute('aria-label', g.idea + ' 購入済みチェック');
+      checkbox.onchange = () => togglePurchased(g.id);
+      const info = document.createElement('div');
+      info.className = 'flex-1 min-w-0';
+      const row1 = document.createElement('div');
+      row1.className = 'flex items-center gap-2 flex-wrap';
+      const idea = document.createElement('span');
+      idea.className = 'font-medium text-gray-700 ' + (g.purchased ? 'line-through' : '');
+      idea.textContent = g.idea;
+      const pBadge = document.createElement('span');
+      pBadge.className = 'text-xs px-2 py-0.5 rounded-full ' + PRIORITY_COLOR[g.priority];
+      pBadge.textContent = g.priority;
+      row1.appendChild(idea); row1.appendChild(pBadge);
+      if (g.note) {
+        const note = document.createElement('div');
+        note.className = 'text-xs text-gray-400 mt-0.5';
+        note.textContent = g.note;
+        info.appendChild(row1); info.appendChild(note);
+      } else {
+        info.appendChild(row1);
+      }
+      const right = document.createElement('div');
+      right.className = 'flex items-center gap-2 shrink-0';
+      const price = document.createElement('span');
+      price.className = 'font-semibold text-sm ' + (g.purchased ? 'text-green-500' : 'text-gray-700');
+      price.textContent = '¥' + g.price.toLocaleString();
+      const delBtn = document.createElement('button');
+      delBtn.className = 'text-gray-300 hover:text-red-400 text-sm';
+      delBtn.textContent = '✕';
+      delBtn.setAttribute('aria-label', g.idea + ' 削除');
+      delBtn.onclick = () => deleteGift(g.id);
+      right.appendChild(price); right.appendChild(delBtn);
+      li.appendChild(checkbox); li.appendChild(info); li.appendChild(right);
+      ul.appendChild(li);
+    }
+    section.appendChild(header); section.appendChild(ul);
+    list.appendChild(section);
+  }
+}
+
+render();
+</script>
+</body>
+</html>
